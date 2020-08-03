@@ -3,7 +3,7 @@ import 'firebase/auth' // If you need it
 import 'firebase/firestore' // If you need it
 // import 'firebase/storage' // If you need it
 // import 'firebase/analytics' // If you need it
-console.log('process.env.FIREBASE_API_KEY', process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+console.log('process.env.NEXT_PUBLIC_FIREBASE_API_KEY', process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
 console.log('process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN);
 
 
