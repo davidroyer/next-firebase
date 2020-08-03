@@ -2,13 +2,18 @@ import Head from 'next/head';
 import { useEffect } from 'react';
 import { useUser } from '../context/userContext';
 import firebase from '../firebase/clientApp';
-console.log('firebase', firebase);
+import { useState } from 'react';
+import JSONPretty from 'react-json-pretty';
+import { useForm, usePlugin, usePlugins } from 'tinacms';
+import { MarkdownFieldPlugin } from 'react-tinacms-editor'
 
 const fireDB = firebase.firestore();
 
 export default function Home() {
   // Our custom hook to get context values
   const { loadingUser, user } = useUser();
+  const [page, setPage] = useState({});
+  // const [pages, setPages] = useState([]);
 
   console.log('firebase test', firebase);
 
@@ -18,11 +23,13 @@ export default function Home() {
      * This had to go inside `useEffect`.
      * Before I did that, it was saying Promise pending.
      */
-    const pages = fireDB
+    fireDB
       .collection('pages')
+      .doc('home')
       .get()
-      .then(pages => pages.docs.map(doc => console.log(doc.data())));
-
+      .then(page => {
+        setPage(page.data())
+      })
     // You also have your firebase app initialized
   }, []);
 
@@ -34,6 +41,31 @@ export default function Home() {
     // You also have your firebase app initialized
   }, [loadingUser, user]);
 
+
+  const pageFields =  [
+    { name: "title", label: "Title", component: "text" },
+    { name: "body", label: "Body", component: "markdown" }
+  ];
+
+  const [modifiedPage, form] = useForm({
+    id: 'home',
+    label: 'Home Page',
+    initialValues: page,
+    fields: pageFields,
+    onSubmit({ id, ...data }) {
+      // if (!firestore) return;
+      fireDB
+        .collection("pages")
+        .doc('home')
+        .update(data)
+        .then(a => console.log(a))
+        .catch(e => console.log(e));
+    },
+  });
+
+  usePlugins(MarkdownFieldPlugin)
+  usePlugin(form)
+
   return (
     <div className="container">
       <Head>
@@ -44,6 +76,7 @@ export default function Home() {
       <main>
         <h1 className="title">Next.js w/ Firebase Client-Side</h1>
         <p className="description">Fill in your credentials to get started</p>
+        <JSONPretty id="json-pretty" data={page}></JSONPretty>
       </main>
 
       <style jsx>{`
