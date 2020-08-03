@@ -1,20 +1,38 @@
-import Head from 'next/head'
-import { useEffect } from 'react'
-import { useUser } from '../context/userContext'
-import firebase from '../firebase/clientApp'
+import Head from 'next/head';
+import { useEffect } from 'react';
+import { useUser } from '../context/userContext';
+import firebase from '../firebase/clientApp';
+console.log('firebase', firebase);
+
+const fireDB = firebase.firestore();
 
 export default function Home() {
   // Our custom hook to get context values
-  const { loadingUser, user } = useUser()
+  const { loadingUser, user } = useUser();
+
+  console.log('firebase test', firebase);
+
+  useEffect(() => {
+    /**
+     * @Note
+     * This had to go inside `useEffect`.
+     * Before I did that, it was saying Promise pending.
+     */
+    const pages = fireDB
+      .collection('pages')
+      .get()
+      .then(pages => pages.docs.map(doc => console.log(doc.data())));
+
+    // You also have your firebase app initialized
+  }, []);
 
   useEffect(() => {
     if (!loadingUser) {
       // You know that the user is loaded: either logged in or out!
-      console.log(user)
+      console.log(user);
     }
     // You also have your firebase app initialized
-    console.log(firebase)
-  }, [loadingUser, user])
+  }, [loadingUser, user]);
 
   return (
     <div className="container">
@@ -169,5 +187,5 @@ export default function Home() {
         }
       `}</style>
     </div>
-  )
+  );
 }
