@@ -2,36 +2,26 @@ import Head from 'next/head';
 import { useEffect } from 'react';
 import { useUser } from '../context/userContext';
 import firebase from '../firebase/clientApp';
-import { useState } from 'react';
 import JSONPretty from 'react-json-pretty';
-import { useForm, usePlugin, usePlugins } from 'tinacms';
-import { MarkdownFieldPlugin } from 'react-tinacms-editor'
+import {
+  useForm,
+  usePlugin,
+  usePlugins,
+  useCMS,
+  useFormScreenPlugin
+} from 'tinacms';
+import { MarkdownFieldPlugin } from 'react-tinacms-editor';
+import ReactMarkdown from 'react-markdown';
 
 const fireDB = firebase.firestore();
 
-export default function Home() {
+export default function Home({
+  page: initialPage,
+  siteSettings: initialSiteSettings
+}) {
+  const cms = useCMS();
   // Our custom hook to get context values
   const { loadingUser, user } = useUser();
-  const [page, setPage] = useState({});
-  // const [pages, setPages] = useState([]);
-
-  console.log('firebase test', firebase);
-
-  useEffect(() => {
-    /**
-     * @Note
-     * This had to go inside `useEffect`.
-     * Before I did that, it was saying Promise pending.
-     */
-    fireDB
-      .collection('pages')
-      .doc('home')
-      .get()
-      .then(page => {
-        setPage(page.data())
-      })
-    // You also have your firebase app initialized
-  }, []);
 
   useEffect(() => {
     if (!loadingUser) {
@@ -41,31 +31,44 @@ export default function Home() {
     // You also have your firebase app initialized
   }, [loadingUser, user]);
 
-
-  const pageFields =  [
-    { name: "title", label: "Title", component: "text" },
-    { name: "body", label: "Body", component: "markdown" }
+  const pageFields = [
+    { name: 'title', label: 'Title', component: 'text' },
+    { name: 'body', label: 'Body', component: 'markdown' }
   ];
 
-  const [modifiedPage, form] = useForm({
-    id: 'home',
+  const [page, form] = useForm({
+    id: initialPage.id,
     label: 'Home Page',
-    initialValues: page,
+    initialValues: initialPage,
     fields: pageFields,
-    onSubmit({ id, ...data }) {
-      // if (!firestore) return;
-      fireDB
-        .collection("pages")
-        .doc('home')
-        .update(data)
-        .then(a => console.log(a))
-        .catch(e => console.log(e));
-    },
+    async onSubmit({ id, ...data }) {
+      console.log('onSubmit -> id', id);
+      await fireDB.collection('pages').doc('home').update(data);
+      cms.alerts.success('Saved!');
+    }
   });
 
-  usePlugins(MarkdownFieldPlugin)
-  usePlugin(form)
+  usePlugins(MarkdownFieldPlugin);
+  usePlugin(form);
 
+  const siteSettingsFields = [
+    { name: 'title', label: 'Site Title', component: 'text' },
+    { name: 'description', label: 'Site Description', component: 'text' }
+  ];
+
+  const [siteSettings, siteForm] = useForm({
+    id: 'site-setting',
+    label: 'Site Settings',
+    initialValues: initialSiteSettings,
+    fields: siteSettingsFields,
+    async onSubmit({ id, ...data }) {
+      console.log('onSubmit -> id', id);
+      await fireDB.collection('settings').doc('site').update(data);
+      cms.alerts.success('Saved Settings!');
+    }
+  });
+
+  useFormScreenPlugin(siteForm);
   return (
     <div className="container">
       <Head>
@@ -74,9 +77,9 @@ export default function Home() {
       </Head>
 
       <main>
-        <h1 className="title">Next.js w/ Firebase Client-Side</h1>
-        <p className="description">Fill in your credentials to get started</p>
-        <JSONPretty id="json-pretty" data={page}></JSONPretty>
+        <h1 className="title">{page.title}</h1>
+        <ReactMarkdown className="content-body">{page.body}</ReactMarkdown>
+        <JSONPretty data={siteSettings}></JSONPretty>
       </main>
 
       <style jsx>{`
@@ -203,6 +206,9 @@ export default function Home() {
             flex-direction: column;
           }
         }
+        .content-body {
+          text-align: left;
+        }
       `}</style>
 
       <style jsx global>{`
@@ -221,4 +227,22 @@ export default function Home() {
       `}</style>
     </div>
   );
+}
+
+export async function getStaticProps() {
+  const page = await fireDB.collection('pages').doc('home').get();
+  const siteSettings = await fireDB.collection('settings').doc('site').get();
+
+  return {
+    props: {
+      siteSettings: {
+        id: siteSettings.id,
+        ...siteSettings.data()
+      },
+      page: {
+        id: page.id,
+        ...page.data()
+      }
+    }
+  };
 }
